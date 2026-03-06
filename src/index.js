@@ -30,8 +30,8 @@ function rateLimit(limit, windowMs) {
     await next()
   }
 }
-
 app.use('/shorten', rateLimit(10, 60 * 1000))
+
 
 function generateCode() {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -83,6 +83,23 @@ app.get('/:code', async (c) => {
 
   return c.redirect(result[0].original_url, 301)
 })
+
+// Cleanup function — deletes links older than 7 days
+async function cleanupOldLinks() {
+  try {
+    const result = await sql`
+      DELETE FROM links
+      WHERE created_at < NOW() - INTERVAL '7 days'
+    `
+    console.log('Cleanup ran — old links removed')
+  } catch (err) {
+    console.error('Cleanup error:', err)
+  }
+}
+// Run cleanup on server start
+cleanupOldLinks()
+// Then run every 24 hours
+setInterval(cleanupOldLinks, 24 * 60 * 60 * 1000)
 
 // Start the server
 serve({ fetch: app.fetch, port: process.env.PORT || 3000 }, () => {

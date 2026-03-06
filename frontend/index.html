@@ -141,7 +141,7 @@ nav {
 .status-pill {
   display: flex; align-items: center; gap: 8px;
   font-size: 10px; letter-spacing: 0.15em;
-  text-transform: uppercase; color: var(--muted);
+  text-transform: uppercase; color: var(--text2);
 }
 
 .status-dot {
@@ -157,7 +157,7 @@ nav {
 
 .nav-badge {
   font-size: 10px; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--muted);
+  text-transform: uppercase; color: var(--text2);
   border: 1px solid var(--border2);
   padding: 7px 16px; border-radius: 2px;
   background: var(--surface);
@@ -340,7 +340,14 @@ nav {
 .copy-btn:hover { border-color: var(--burgundy); color: var(--burg-soft); }
 .copy-btn.copied { border-color: var(--burgundy); background: var(--burg-dim); color: var(--burg-soft); }
 
-/* ERROR */
+.result-expiry {
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  background: rgba(255,255,255,0.03);
+}
 .error-msg {
   display: none; margin-top: 12px;
   font-size: 11px; color: var(--error);
@@ -557,6 +564,7 @@ footer {
           <div class="result-url" id="resultUrl"></div>
           <button class="copy-btn" id="copyBtn" onclick="copyResult()">Copy</button>
         </div>
+        <div class="result-expiry">⏳ This link expires in 7 days</div>
       </div>
     </div>
 
