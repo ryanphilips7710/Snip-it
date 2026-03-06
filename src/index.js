@@ -64,7 +64,7 @@ app.post('/shorten', async (c) => {
     VALUES (${code}, ${url})
   `
 
-  const shortUrl = `http://localhost:3000/${code}`
+  const shortUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/${code}`
   return c.json({ short: shortUrl, code })
 })
 
@@ -85,6 +85,6 @@ app.get('/:code', async (c) => {
 })
 
 // Start the server
-serve({ fetch: app.fetch, port: 3000 }, () => {
+serve({ fetch: app.fetch, port: process.env.PORT || 3000 }, () => {
   console.log('Server running at http://localhost:3000')
 })
