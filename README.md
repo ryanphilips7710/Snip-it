@@ -10,23 +10,7 @@ Turn any long, ugly URL into a clean short link in one click. Built from scratch
 
 ## Preview
 
-```
-Your URL,
-SNIP IT.
-─────────────────────────────────────────────────────
-  URL  │  Paste your long URL here…          │  SNIP
-─────────────────────────────────────────────────────
-  ✦ Sniped                        Ready to share
-  https://snip-it-ny2l.onrender.com/x7kP2q   [Copy]
-  ⏳ This link expires in 7 days
-  ┌──────────────┐
-  │   QR CODE    │   ← scannable, right-click to save
-  └──────────────┘
-
-  RECENT SNIPS
-  01  snip-it.../x7kP2q   https://google.com   [Copy] [QR]
-  02  snip-it.../abc123   https://github.com   [Copy] [QR]
-```
+<img width="1920" height="1128" alt="Screenshot 2026-03-07 004912" src="https://github.com/user-attachments/assets/4b2c56de-83f0-4b36-9f17-5bc4892022ff" />
 
 ---
 
@@ -44,9 +28,7 @@ SNIP IT.
 - **Click tracking** — every redirect increments a click counter in the database
 - **Auto cleanup** — server deletes expired links every 24 hours automatically
 - **Vercel Analytics** — page views, visitors, and country breakdown
-- **Custom cursor** — dual-cursor dot with lagging ring animation
 - **Fully responsive** — works on mobile and desktop
-- **Dark navy + neon green** — a UI that actually looks good
 
 ---
 
@@ -61,7 +43,6 @@ SNIP IT.
 | **Analytics** | Vercel Analytics |
 | **Frontend Host** | Vercel |
 | **Backend Host** | Render |
-| **Fonts** | Barlow + DM Mono (Google Fonts) |
 
 ---
 
@@ -178,23 +159,6 @@ Server running at `http://localhost:3000`
 ### 6. Open the frontend
 Open `frontend/index.html` directly in your browser. Paste any URL and hit **Snip**.
 
----
-
-## Deployment
-
-### Backend → Render
-1. Push code to GitHub
-2. Go to [render.com](https://render.com) → New Web Service
-3. Connect your repo
-4. Set build command: `npm install`
-5. Set start command: `node src/index.js`
-6. Add environment variables: `DATABASE_URL`, `PORT`, `BASE_URL`
-
-### Frontend → Vercel
-1. Go to [vercel.com](https://vercel.com) → New Project
-2. Import your GitHub repo
-3. Set **Root Directory** to `frontend`
-4. Deploy — done in 30 seconds
 
 ---
 
@@ -266,7 +230,6 @@ CREATE TABLE links (
 - In-browser QR code generation with qrcodejs
 - Git, GitHub, and version control workflows
 - Deploying a full-stack app across Render + Vercel
-- DNS, custom domains, and environment-based config
 - Vercel Analytics for tracking real user traffic
 
 ---
@@ -281,7 +244,6 @@ CREATE TABLE links (
 - [x] QR codes for history items
 - [x] Vercel Analytics
 - [ ] Analytics dashboard — visualize click counts per link
-- [ ] Custom aliases — let users pick their own slug
 - [ ] User accounts — manage and delete your own links
 - [ ] Custom domain — `snipit.link/x7kP2q`
 - [ ] Google Safe Browsing API — block malicious URLs
