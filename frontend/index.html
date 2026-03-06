@@ -141,7 +141,7 @@ nav {
 .status-pill {
   display: flex; align-items: center; gap: 8px;
   font-size: 10px; letter-spacing: 0.15em;
-  text-transform: uppercase; color: var(--text2);
+  text-transform: uppercase; color: var(--muted);
 }
 
 .status-dot {
@@ -157,7 +157,7 @@ nav {
 
 .nav-badge {
   font-size: 10px; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--text2);
+  text-transform: uppercase; color: var(--muted);
   border: 1px solid var(--border2);
   padding: 7px 16px; border-radius: 2px;
   background: var(--surface);
@@ -340,14 +340,72 @@ nav {
 .copy-btn:hover { border-color: var(--burgundy); color: var(--burg-soft); }
 .copy-btn.copied { border-color: var(--burgundy); background: var(--burg-dim); color: var(--burg-soft); }
 
-.result-expiry {
-  padding: 10px 20px;
+/* QR CODE */
+.result-qr {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
   border-top: 1px solid var(--border);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: #ffffff;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.02);
 }
+.result-qr.show { display: flex; }
+
+.qr-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.qr-hint {
+  font-size: 10px;
+  color: var(--muted2);
+  letter-spacing: 0.08em;
+}
+
+#qrCode img, #qrCode canvas {
+  border-radius: 4px;
+  border: 5px solid white;
+  display: block;
+}
+
+/* HISTORY QR */
+.h-qr-btn {
+  font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted); background: none;
+  border: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  padding: 6px 14px; border-radius: 2px;
+  cursor: none; flex-shrink: 0; transition: all 0.2s;
+}
+.h-qr-btn:hover { border-color: var(--burgundy); color: var(--burg-soft); }
+.h-qr-btn.active { border-color: var(--burgundy); color: var(--burg-soft); background: var(--burg-dim); }
+
+.h-qr-panel {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.015);
+  animation: fadeIn 0.2s ease both;
+}
+.h-qr-panel.show { display: flex; }
+.h-qr-panel img, .h-qr-panel canvas {
+  border-radius: 4px;
+  border: 4px solid white;
+  display: block;
+}
+.h-qr-hint {
+  font-size: 10px; color: var(--muted2);
+  letter-spacing: 0.08em;
+}
+
+/* ERROR */
 .error-msg {
   display: none; margin-top: 12px;
   font-size: 11px; color: var(--error);
@@ -492,6 +550,7 @@ footer {
   footer { flex-direction: column; gap: 8px; }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
@@ -565,6 +624,11 @@ footer {
           <button class="copy-btn" id="copyBtn" onclick="copyResult()">Copy</button>
         </div>
         <div class="result-expiry">⏳ This link expires in 7 days</div>
+        <div class="result-qr" id="resultQr">
+          <div class="qr-label">QR Code</div>
+          <div id="qrCode"></div>
+          <div class="qr-hint">Right-click to save</div>
+        </div>
       </div>
     </div>
 
@@ -632,14 +696,18 @@ function renderHistory() {
     list.innerHTML = `<div class="history-empty">No snips yet — your shortened links will appear here.</div>`;
     return;
   }
-  list.innerHTML = snipHistory.slice().reverse().map((item, i) => `
-    <div class="history-item">
+  list.innerHTML = snipHistory.slice().reverse().map((item, i) => {
+    const idx = snipHistory.length - 1 - i;
+    return `
+    <div class="history-item" style="flex-wrap:wrap;">
       <div class="h-num">${String(snipHistory.length - i).padStart(2,'0')}</div>
       <div class="h-short">${item.short}</div>
       <div class="h-orig">${item.original}</div>
       <button class="h-copy" onclick="copyText(this,'${item.short}')">Copy</button>
+      <button class="h-qr-btn" onclick="toggleHistoryQR(this, '${item.short}', ${idx})">QR</button>
+      <div class="h-qr-panel" id="hqr-${idx}" style="width:100%;"></div>
     </div>
-  `).join('');
+  `}).join('');
 }
 renderHistory();
 
@@ -652,6 +720,7 @@ async function handleSnip() {
 
   errEl.classList.remove('show');
   card.classList.remove('show');
+  document.getElementById('resultQr').classList.remove('show');
   if (!url) { showError('Please enter a URL.'); return; }
 
   btn.innerHTML = '<span class="spinner"></span>';
@@ -670,6 +739,20 @@ async function handleSnip() {
     document.getElementById('copyBtn').textContent = 'Copy';
     document.getElementById('copyBtn').classList.remove('copied');
     card.classList.add('show');
+
+    // Generate QR code for result
+    const qrContainer = document.getElementById('qrCode');
+    const qrSection = document.getElementById('resultQr');
+    qrContainer.innerHTML = '';
+    new QRCode(qrContainer, {
+      text: data.short,
+      width: 160,
+      height: 160,
+      colorDark: '#080b12',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    qrSection.classList.add('show');
 
     snipHistory.push({ short: data.short, original: url });
     if (snipHistory.length > 20) snipHistory.shift();
@@ -715,6 +798,41 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// Toggle QR code for history items
+function toggleHistoryQR(btn, url, idx) {
+  const panel = document.getElementById(`hqr-${idx}`);
+  const isOpen = panel.classList.contains('show');
+
+  if (isOpen) {
+    panel.classList.remove('show');
+    panel.innerHTML = '';
+    btn.classList.remove('active');
+    btn.textContent = 'QR';
+  } else {
+    panel.classList.add('show');
+    panel.innerHTML = '<div class="h-qr-hint">Generating...</div>';
+    setTimeout(() => {
+      panel.innerHTML = '';
+      const qrDiv = document.createElement('div');
+      panel.appendChild(qrDiv);
+      new QRCode(qrDiv, {
+        text: url,
+        width: 140,
+        height: 140,
+        colorDark: '#080b12',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      const hint = document.createElement('div');
+      hint.className = 'h-qr-hint';
+      hint.textContent = 'Right-click to save';
+      panel.appendChild(hint);
+    }, 50);
+    btn.classList.add('active');
+    btn.textContent = 'Hide QR';
+  }
 }
 
 document.getElementById('urlInput').addEventListener('keydown', e => {
