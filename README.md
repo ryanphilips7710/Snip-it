@@ -13,12 +13,19 @@ Turn any long, ugly URL into a clean short link in one click. Built from scratch
 ```
 Your URL,
 SNIP IT.
-─────────────────────────────────────────────
-  URL  │  Paste your long URL here…   │  SNIP
-─────────────────────────────────────────────
-  ✦ Sniped                  Ready to share
-  https://snip-it-ny2l.onrender.com/x7kP2q
-  ⏳ This link expires in 7 days       [Copy]
+─────────────────────────────────────────────────────
+  URL  │  Paste your long URL here…          │  SNIP
+─────────────────────────────────────────────────────
+  ✦ Sniped                        Ready to share
+  https://snip-it-ny2l.onrender.com/x7kP2q   [Copy]
+  ⏳ This link expires in 7 days
+  ┌──────────────┐
+  │   QR CODE    │   ← scannable, right-click to save
+  └──────────────┘
+
+  RECENT SNIPS
+  01  snip-it.../x7kP2q   https://google.com   [Copy] [QR]
+  02  snip-it.../abc123   https://github.com   [Copy] [QR]
 ```
 
 ---
@@ -27,12 +34,17 @@ SNIP IT.
 
 - **Instant URL shortening** — paste any URL, get a clean short link in milliseconds
 - **One-click copy** — copy short links to clipboard instantly
-- **Recent Snips history** — your last 20 links saved locally
+- **QR code generation** — every sniped link gets an instant scannable QR code
+- **History QR codes** — expand a QR code for any of your last 20 links on demand
+- **Recent Snips history** — your last 20 links saved locally in the browser
 - **Auto link expiry** — all links automatically deleted after 7 days to save storage
+- **Expiry notice** — users are clearly told their link expires in 7 days
 - **Rate limiting** — 10 requests per minute per IP to prevent abuse
 - **URL validation** — invalid URLs are rejected before saving
 - **Click tracking** — every redirect increments a click counter in the database
-- **Custom cursor** — dual-cursor with lagging ring animation
+- **Auto cleanup** — server deletes expired links every 24 hours automatically
+- **Vercel Analytics** — page views, visitors, and country breakdown
+- **Custom cursor** — dual-cursor dot with lagging ring animation
 - **Fully responsive** — works on mobile and desktop
 - **Dark navy + neon green** — a UI that actually looks good
 
@@ -45,18 +57,20 @@ SNIP IT.
 | **Frontend** | Plain HTML, CSS, JavaScript |
 | **Backend** | Node.js + Hono |
 | **Database** | PostgreSQL (Neon) |
+| **QR Codes** | qrcodejs (browser-side) |
+| **Analytics** | Vercel Analytics |
 | **Frontend Host** | Vercel |
 | **Backend Host** | Render |
-| **Font** | Barlow + DM Mono (Google Fonts) |
+| **Fonts** | Barlow + DM Mono (Google Fonts) |
 
 ---
 
 ## Project Structure
 
 ```
-snipit/
+Snip-it/
 ├── src/
-│   └── index.js          # Hono backend — all API routes
+│   └── index.js          # Hono backend — all API routes + cleanup
 ├── frontend/
 │   └── index.html        # Complete frontend — single file
 ├── .env                  # Environment variables (never commit this)
@@ -93,7 +107,7 @@ Shortens a URL and returns a short link.
 ---
 
 ### `GET /:code`
-Redirects to the original URL.
+Redirects to the original URL and increments click count.
 
 ```
 GET /x7kP2q → 301 Redirect → https://your-very-long-url.com/goes/here
@@ -191,33 +205,40 @@ User pastes URL → POST /shorten
                       ↓
               Validate URL format
                       ↓
-              Generate 6-char code
+              Rate limit check (10 req/min per IP)
+                      ↓
+              Generate 6-char base62 code
               e.g. "x7kP2q"
                       ↓
-              Check DB for collision
+              Check DB for collision → retry if taken
                       ↓
               INSERT into links table
                       ↓
-              Return short URL
+              Return short URL + generate QR code
 
 User visits short link → GET /x7kP2q
                               ↓
                     SELECT from links table
                               ↓
-                    UPDATE clicks + 1
+                    UPDATE clicks = clicks + 1
                               ↓
                     301 Redirect → original URL
+
+Auto cleanup (runs on server start + every 24hrs)
+                      ↓
+              DELETE WHERE created_at < NOW() - 7 days
 ```
 
 ---
 
 ## Security
 
-- **Rate limiting** — 10 requests/minute per IP address using in-memory tracking
+- **Rate limiting** — 10 requests/minute per IP using in-memory tracking, no package needed
 - **URL validation** — rejects malformed URLs before processing
 - **Environment variables** — all secrets stored in `.env`, never committed to Git
-- **CORS** — configured to allow frontend-backend communication
-- **Auto cleanup** — links older than 7 days are automatically deleted
+- **CORS** — configured to allow frontend-to-backend communication
+- **Auto cleanup** — links older than 7 days deleted automatically every 24 hours
+- **Expiry notice** — users are clearly warned links expire, preventing false expectations
 
 ---
 
@@ -238,25 +259,34 @@ CREATE TABLE links (
 
 - REST API design with HTTP methods (GET, POST)
 - Node.js backend with the Hono framework
-- PostgreSQL database design and queries
+- PostgreSQL database design and SQL queries
 - Environment variables and secrets management
-- CORS and why browsers enforce it
+- CORS and why browsers enforce cross-origin restrictions
 - Rate limiting to prevent API abuse
-- Git, GitHub, and version control
-- Deploying a full-stack app (Render + Vercel)
-- DNS and custom domains
+- In-browser QR code generation with qrcodejs
+- Git, GitHub, and version control workflows
+- Deploying a full-stack app across Render + Vercel
+- DNS, custom domains, and environment-based config
+- Vercel Analytics for tracking real user traffic
 
 ---
 
 ## Roadmap
 
+- [x] URL shortening with 6-char base62 codes
+- [x] Click tracking per link
+- [x] Rate limiting
+- [x] Auto link expiry every 7 days
+- [x] QR code generation for every link
+- [x] QR codes for history items
+- [x] Vercel Analytics
 - [ ] Analytics dashboard — visualize click counts per link
 - [ ] Custom aliases — let users pick their own slug
 - [ ] User accounts — manage and delete your own links
 - [ ] Custom domain — `snipit.link/x7kP2q`
 - [ ] Google Safe Browsing API — block malicious URLs
-- [ ] QR code generation — generate QR codes for short links
 - [ ] Link previews — OG metadata for social sharing
+- [ ] QR code download button
 
 ---
 
