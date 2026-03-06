@@ -1,4 +1,4 @@
-# SnipIt ✂️
+# SNIP-it
 
 > **Precision URL Shortener — Clean, Fast, Shareable.**
 
