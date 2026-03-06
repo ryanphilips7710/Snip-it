@@ -649,7 +649,7 @@ async function handleSnip() {
   btn.disabled = true;
 
   try {
-    const res  = await fetch('http://localhost:3000/shorten', {
+    const res = await fetch('https://snip-it-ny2l.onrender.com/shorten', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })
