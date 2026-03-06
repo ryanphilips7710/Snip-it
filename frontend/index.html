@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnipIt — Precision URL Shortener</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #080b12;
+  --bg2:       #0c1020;
+  --surface:   #0f1422;
+  --surface2:  #131828;
+  --border:    #1c2235;
+  --border2:   #242a40;
+  --burgundy:  #39ff7e;
+  --burg-soft: #57ff96;
+  --burg-dim:  #0a2e18;
+  --text:      #d8dce8;
+  --text2:     #f2f3f7;
+  --muted:     #485070;
+  --muted2:    #2a3048;
+  --error:     #ff4d6a;
+  --card:      #0a0e1a;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+#cursor {
+  position: fixed;
+  width: 6px; height: 6px;
+  background: var(--burg-soft);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s;
+}
+#cursor-ring {
+  position: fixed;
+  width: 28px; height: 28px;
+  border: 1px solid rgba(124,48,72,0.35);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: width 0.35s cubic-bezier(0.16,1,0.3,1),
+              height 0.35s cubic-bezier(0.16,1,0.3,1),
+              border-color 0.3s;
+}
+#cursor.active   { width: 10px; height: 10px; }
+#cursor-ring.active { width: 42px; height: 42px; border-color: rgba(154,61,90,0.5); }
+
+/* bg atmosphere */
+body::before {
+  content: '';
+  position: fixed;
+  top: -20%; right: -10%;
+  width: 700px; height: 700px;
+  background: radial-gradient(ellipse, rgba(15,40,25,0.6) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -20%; left: -10%;
+  width: 500px; height: 500px;
+  background: radial-gradient(ellipse, rgba(8,12,32,0.7) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+.bg-grid {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.011) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.011) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+.vignette {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 1;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(4,6,14,0.75) 100%);
+}
+
+.app {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+
+/* NAV */
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px 56px;
+  border-bottom: 1px solid var(--border);
+  animation: fadeIn 0.8s ease both;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.logo-mark {
+  width: 30px; height: 30px;
+  border: 1px solid var(--burgundy);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--burg-dim), transparent);
+  flex-shrink: 0;
+}
+
+.logo-mark svg { width: 14px; height: 14px; }
+
+.logo-name {
+  font-family: 'Barlow', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text2);
+  text-transform: uppercase;
+}
+.logo-name em { font-style: normal; color: var(--burg-soft); }
+
+.nav-right { display: flex; align-items: center; gap: 24px; }
+
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.status-dot {
+  width: 5px; height: 5px;
+  background: var(--burgundy); border-radius: 50%;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+.nav-badge {
+  font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+  border: 1px solid var(--border2);
+  padding: 7px 16px; border-radius: 2px;
+  background: var(--surface);
+}
+
+/* HERO */
+.hero {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 100px 24px 64px;
+  text-align: center;
+}
+
+.eyebrow {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 40px;
+  animation: fadeUp 0.7s 0.1s ease both;
+}
+.eyebrow-line { width: 48px; height: 1px; background: var(--burgundy); opacity: 0.5; }
+.eyebrow-text {
+  font-size: 10px; letter-spacing: 0.25em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.hero-title {
+  font-family: 'Barlow', sans-serif;
+  font-weight: 900;
+  line-height: 0.88;
+  color: var(--text2);
+  margin-bottom: 28px;
+  animation: fadeUp 0.7s 0.2s ease both;
+}
+
+.title-small {
+  display: block;
+  font-size: clamp(12px, 1.5vw, 16px);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.title-large {
+  display: block;
+  font-size: clamp(88px, 16vw, 168px);
+  font-style: normal;
+  color: var(--text2);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.title-accent { color: var(--burg-soft); }
+
+.hero-sub {
+  font-size: 12px; color: var(--muted);
+  letter-spacing: 0.1em; margin-bottom: 72px;
+  animation: fadeUp 0.7s 0.3s ease both;
+}
+
+/* INPUT */
+.input-wrap {
+  width: 100%; max-width: 700px;
+  animation: fadeUp 0.7s 0.4s ease both;
+}
+
+.input-box {
+  display: flex; align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 3px; overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.input-box:focus-within {
+  border-color: var(--burgundy);
+  box-shadow: 0 0 0 1px rgba(57,255,126,0.2), 0 0 50px rgba(57,255,126,0.06);
+}
+
+.input-pre {
+  display: flex; align-items: center;
+  padding: 0 20px;
+  border-right: 1px solid var(--border);
+  font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted);
+  white-space: nowrap; flex-shrink: 0;
+  background: var(--surface2);
+}
+
+.url-input {
+  flex: 1; background: transparent;
+  border: none; outline: none;
+  color: var(--text2);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px; font-weight: 300;
+  padding: 20px 24px; letter-spacing: 0.03em;
+}
+.url-input::placeholder { color: var(--muted2); font-style: italic; }
+
+.snip-btn {
+  background: var(--burgundy);
+  color: #080b12; border: none;
+  padding: 0 34px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px; font-weight: 800;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  cursor: none; flex-shrink: 0;
+  transition: background 0.2s;
+  position: relative; overflow: hidden;
+}
+.snip-btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+  pointer-events: none;
+}
+.snip-btn:hover { background: var(--burg-soft); }
+.snip-btn:active { transform: scale(0.99); }
+.snip-btn:disabled { opacity: 0.4; }
+
+/* RESULT */
+.result-card {
+  display: none;
+  margin-top: 14px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 3px; overflow: hidden;
+  animation: revealDown 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+.result-card.show { display: block; }
+
+@keyframes revealDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-top {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.result-badge {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--burg-soft);
+}
+.badge-dot { width: 4px; height: 4px; background: var(--burg-soft); border-radius: 50%; }
+
+.result-meta { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+
+.result-body {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px; gap: 20px;
+}
+
+.result-url {
+  font-family: 'Barlow', sans-serif;
+  font-size: 20px; font-style: normal;
+  font-weight: 700; color: var(--text2);
+  word-break: break-all; letter-spacing: 0.01em;
+}
+
+.copy-btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 9px 20px; border-radius: 2px;
+  cursor: none; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.copy-btn:hover { border-color: var(--burgundy); color: var(--burg-soft); }
+.copy-btn.copied { border-color: var(--burgundy); background: var(--burg-dim); color: var(--burg-soft); }
+
+/* ERROR */
+.error-msg {
+  display: none; margin-top: 12px;
+  font-size: 11px; color: var(--error);
+  letter-spacing: 0.08em; padding-left: 4px;
+}
+.error-msg.show { display: block; animation: fadeIn 0.2s ease both; }
+
+/* ORNAMENT */
+.ornament {
+  display: flex; align-items: center; gap: 16px;
+  margin: 56px auto 0;
+  width: 100%; max-width: 700px;
+  animation: fadeUp 0.7s 0.5s ease both;
+}
+.orn-line {
+  flex: 1; height: 1px;
+  background: linear-gradient(to right, transparent, var(--border2));
+}
+.orn-line:last-child { background: linear-gradient(to left, transparent, var(--border2)); }
+.orn-icon { font-size: 10px; color: var(--muted2); letter-spacing: 0.2em; }
+
+/* HISTORY */
+.history {
+  width: 100%; max-width: 700px;
+  margin-top: 32px;
+  animation: fadeUp 0.7s 0.55s ease both;
+}
+
+.history-head {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-label {
+  font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.clear-btn {
+  font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted2);
+  background: none; border: none; cursor: none;
+  font-family: 'DM Mono', monospace;
+  transition: color 0.2s;
+}
+.clear-btn:hover { color: var(--error); }
+
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+
+.history-item {
+  display: flex; align-items: center; gap: 20px;
+  padding: 14px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  transition: border-color 0.2s, background 0.2s;
+  animation: fadeIn 0.3s ease both;
+}
+.history-item:hover { border-color: var(--border2); background: var(--surface2); }
+
+.h-num { font-size: 10px; color: var(--muted2); min-width: 20px; text-align: right; flex-shrink: 0; }
+.h-short {
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px; font-style: normal; font-weight: 700;
+  color: var(--burg-soft); min-width: 180px; flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+.h-orig { font-size: 11px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h-copy {
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); background: none;
+  border: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  padding: 6px 14px; border-radius: 2px;
+  cursor: none; flex-shrink: 0; transition: all 0.2s;
+}
+.h-copy:hover { border-color: var(--burgundy); color: var(--burg-soft); }
+.h-copy.copied { border-color: var(--burgundy); color: var(--burg-soft); background: var(--burg-dim); }
+
+.history-empty {
+  padding: 40px; text-align: center;
+  border: 1px dashed var(--border); border-radius: 3px;
+  font-family: 'DM Mono', monospace; font-style: normal;
+  font-size: 11px; color: var(--muted2); letter-spacing: 0.08em;
+}
+
+/* FOOTER */
+footer {
+  padding: 24px 56px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  animation: fadeIn 0.8s 0.6s ease both;
+}
+
+.footer-l { display: flex; align-items: center; gap: 20px; }
+.footer-brand { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 13px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+.footer-sep { width: 1px; height: 12px; background: var(--border2); }
+.footer-v { font-size: 10px; color: var(--muted2); letter-spacing: 0.1em; }
+.footer-r { font-size: 10px; color: var(--muted2); letter-spacing: 0.08em; }
+
+/* SPINNER */
+.spinner {
+  width: 13px; height: 13px;
+  border: 1.5px solid rgba(8,11,18,0.3);
+  border-top-color: #080b12;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block; vertical-align: middle;
+}
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 36px; left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 0.1em;
+  padding: 12px 28px; border-radius: 2px;
+  opacity: 0; pointer-events: none; z-index: 500;
+  transition: opacity 0.25s, transform 0.25s;
+  backdrop-filter: blur(16px);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  nav, footer { padding: 24px; }
+  .hero { padding: 64px 20px 40px; }
+  .nav-badge { display: none; }
+  .h-short { min-width: 130px; }
+  .snip-btn { padding: 0 20px; font-size: 14px; }
+  footer { flex-direction: column; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<div class="bg-grid"></div>
+<div class="vignette"></div>
+
+<div class="app">
+
+  <nav>
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 7h10M7 2l5 5-5 5" stroke="#39ff7e" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="logo-name">Snip<em>It</em></div>
+    </div>
+    <div class="nav-right">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        Live
+      </div>
+      <div class="nav-badge">URL Shortener</div>
+    </div>
+  </nav>
+
+  <section class="hero">
+
+    <div class="eyebrow">
+      <div class="eyebrow-line"></div>
+      <div class="eyebrow-text">Precision link management</div>
+      <div class="eyebrow-line"></div>
+    </div>
+
+    <h1 class="hero-title">
+      <span class="title-small">Your URL,</span>
+      <span class="title-large">SNIP <span class="title-accent">IT.</span></span>
+    </h1>
+
+    <p class="hero-sub">Reduce any URL to its essence — clean, shareable, yours.</p>
+
+    <div class="input-wrap">
+      <div class="input-box">
+        <div class="input-pre">URL</div>
+        <input
+          type="text"
+          class="url-input"
+          id="urlInput"
+          placeholder="Paste your long URL here…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="snip-btn" id="snipBtn" onclick="handleSnip()">Snip</button>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="result-card" id="resultCard">
+        <div class="result-top">
+          <div class="result-badge">
+            <div class="badge-dot"></div>
+            Sniped
+          </div>
+          <div class="result-meta">Ready to share</div>
+        </div>
+        <div class="result-body">
+          <div class="result-url" id="resultUrl"></div>
+          <button class="copy-btn" id="copyBtn" onclick="copyResult()">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ornament">
+      <div class="orn-line"></div>
+      <div class="orn-icon">✦ ✦ ✦</div>
+      <div class="orn-line"></div>
+    </div>
+
+    <div class="history">
+      <div class="history-head">
+        <div class="history-label">Recent Snips</div>
+        <button class="clear-btn" onclick="clearHistory()">Clear all</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+  </section>
+
+  <footer>
+    <div class="footer-l">
+      <div class="footer-brand">SnipIt</div>
+      <div class="footer-sep"></div>
+      <div class="footer-v">v1.0.0</div>
+    </div>
+    <div class="footer-r">localhost:3000</div>
+  </footer>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Cursor
+const cur = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cur.style.left = mx + 'px';
+  cur.style.top  = my + 'px';
+});
+
+(function animateRing() {
+  rx += (mx - rx) * 0.1;
+  ry += (my - ry) * 0.1;
+  ring.style.left = rx + 'px';
+  ring.style.top  = ry + 'px';
+  requestAnimationFrame(animateRing);
+})();
+
+document.querySelectorAll('button, input').forEach(el => {
+  el.addEventListener('mouseenter', () => { cur.classList.add('active'); ring.classList.add('active'); });
+  el.addEventListener('mouseleave', () => { cur.classList.remove('active'); ring.classList.remove('active'); });
+});
+
+// State
+let snipHistory = [];
+try { snipHistory = JSON.parse(localStorage.getItem('snipit_v2') || '[]'); } catch {}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (snipHistory.length === 0) {
+    list.innerHTML = `<div class="history-empty">No snips yet — your shortened links will appear here.</div>`;
+    return;
+  }
+  list.innerHTML = snipHistory.slice().reverse().map((item, i) => `
+    <div class="history-item">
+      <div class="h-num">${String(snipHistory.length - i).padStart(2,'0')}</div>
+      <div class="h-short">${item.short}</div>
+      <div class="h-orig">${item.original}</div>
+      <button class="h-copy" onclick="copyText(this,'${item.short}')">Copy</button>
+    </div>
+  `).join('');
+}
+renderHistory();
+
+async function handleSnip() {
+  const input = document.getElementById('urlInput');
+  const btn   = document.getElementById('snipBtn');
+  const errEl = document.getElementById('errorMsg');
+  const card  = document.getElementById('resultCard');
+  const url   = input.value.trim();
+
+  errEl.classList.remove('show');
+  card.classList.remove('show');
+  if (!url) { showError('Please enter a URL.'); return; }
+
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch('http://localhost:3000/shorten', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (!res.ok) { showError(data.error || 'Something went wrong.'); return; }
+
+    document.getElementById('resultUrl').textContent = data.short;
+    document.getElementById('copyBtn').textContent = 'Copy';
+    document.getElementById('copyBtn').classList.remove('copied');
+    card.classList.add('show');
+
+    snipHistory.push({ short: data.short, original: url });
+    if (snipHistory.length > 20) snipHistory.shift();
+    localStorage.setItem('snipit_v2', JSON.stringify(snipHistory));
+    renderHistory();
+    input.value = '';
+  } catch {
+    showError('Cannot reach server. Is it running on localhost:3000?');
+  } finally {
+    btn.innerHTML = 'Snip';
+    btn.disabled = false;
+  }
+}
+
+function copyResult() {
+  copyText(document.getElementById('copyBtn'), document.getElementById('resultUrl').textContent);
+}
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    showToast('Copied to clipboard');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2200);
+  });
+}
+
+function clearHistory() {
+  snipHistory = [];
+  localStorage.removeItem('snipit_v2');
+  renderHistory();
+  showToast('History cleared');
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = '— ' + msg;
+  el.classList.add('show');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleSnip();
+});
+</script>
+</body>
+</html>
